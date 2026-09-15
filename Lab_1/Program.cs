@@ -1,43 +1,47 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using Microsoft.EntityFrameworkCore;
+using PhotoStudioApp.Data;
 
-string connectionString = "Server=localhost\\SQLEXPRESS01;Database=Photo studio;Trusted_Connection=True;TrustServerCertificate=True;";
+using var context = new PhotoStudioContext();
 
-string query = @"
-    SELECT o.ID, c.LastName, c.FirstName, s.Name, 
-           od.Quantity, od.UnitPrice, o.Date, o.DeliveryDate
-    FROM OrderDetails od
-    JOIN Orders o ON od.OrderID = o.ID
-    JOIN Clients c ON o.ClientID = c.ID
-    JOIN Services s ON od.ServiceID = s.ID
-    ORDER BY o.ID;";
+Console.WriteLine("Підключення до бази даних через Entity Framework Core...\n");
 
-using (SqlConnection connection = new SqlConnection(connectionString))
-{
-    connection.Open();
-    Console.WriteLine("Підключення до бази даних успішне!\n");
-
-    using (SqlCommand command = new SqlCommand(query, connection))
-    using (SqlDataReader reader = command.ExecuteReader())
+var query =
+    from od in context.OrderDetails
+    join o in context.Orders on od.OrderID equals o.ID
+    join c in context.Clients on o.ClientID equals c.ID
+    join s in context.Services on od.ServiceID equals s.ID
+    orderby o.ID
+    select new
     {
-        Console.WriteLine($"{"OrderID",-8}{"Прізвище",-15}{"Ім'я",-12}{"Послуга",-25}{"К-сть",-7}{"Ціна",-10}{"Дата прийому",-15}{"Дата видачі",-15}");
-        Console.WriteLine(new string('-', 110));
+        o.ID,
+        c.LastName,
+        c.FirstName,
+        ServiceName = s.Name,
+        od.Quantity,
+        od.UnitPrice,
+        o.Date,
+        o.DeliveryDate
+    };
 
-        while (reader.Read())
-        {
-            Console.WriteLine(
-                $"{reader["ID"],-8}" +
-                $"{reader["LastName"],-15}" +
-                $"{reader["FirstName"],-12}" +
-                $"{reader["Name"],-25}" +
-                $"{reader["Quantity"],-7}" +
-                $"{reader["UnitPrice"],-10}" +
-                $"{Convert.ToDateTime(reader["Date"]).ToShortDateString(),-15}" +
-                $"{Convert.ToDateTime(reader["DeliveryDate"]).ToShortDateString(),-15}"
-            );
-        }
-    }
+var results = query.AsNoTracking().ToList();
+
+Console.WriteLine(
+    $"{"OrderID",-8}{"Прізвище",-15}{"Ім'я",-12}{"Послуга",-25}{"К-сть",-7}{"Ціна",-10}{"Дата прийому",-15}{"Дата видачі",-15}");
+Console.WriteLine(new string('-', 110));
+
+foreach (var row in results)
+{
+    Console.WriteLine(
+        $"{row.ID,-8}" +
+        $"{row.LastName,-15}" +
+        $"{row.FirstName,-12}" +
+        $"{row.ServiceName,-25}" +
+        $"{row.Quantity,-7}" +
+        $"{row.UnitPrice,-10}" +
+        $"{row.Date.ToShortDateString(),-15}" +
+        $"{row.DeliveryDate.ToShortDateString(),-15}"
+    );
 }
 
 Console.WriteLine("\nНатисніть будь-яку клавішу для виходу...");
 Console.ReadKey();
-
