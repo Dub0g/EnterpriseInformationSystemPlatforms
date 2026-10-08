@@ -1,0 +1,26 @@
+﻿@model OrderDetail
+
+@{
+    ViewData["Title"] = "Видалити позицію замовлення";
+}
+
+<h1>Видалити позицію замовлення</h1>
+
+<h4>Ви впевнені, що хочете видалити цю позицію?</h4>
+
+<dl class="row">
+    <dt class="col-sm-3">Послуга</dt>
+    <dd class="col-sm-9">@Model.Service.Name</dd>
+
+    <dt class="col-sm-3">Кількість</dt>
+    <dd class="col-sm-9">@Model.Quantity</dd>
+
+    <dt class="col-sm-3">Ціна за одиницю</dt>
+    <dd class="col-sm-9">@Model.UnitPrice.ToString("0.00")</dd>
+</dl>
+
+<form asp-action="DeleteDetail">
+    <input type="hidden" asp-for="ID" />
+    <button type="submit" class="btn btn-danger">Видалити</button>
+    <a asp-action="Details" asp-route-id="@Model.OrderID" class="btn btn-secondary">Скасувати</a>
+</form>

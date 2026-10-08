@@ -1,0 +1,39 @@
+@model IEnumerable<Order>
+
+@{
+    ViewData["Title"] = "Замовлення";
+}
+
+<h1>Замовлення</h1>
+
+<p>
+    <a asp-action="Create" class="btn btn-primary">Нове замовлення</a>
+</p>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>№</th>
+            <th>Клієнт</th>
+            <th>Дата прийому</th>
+            <th>Дата видачі</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.ID</td>
+                <td>@item.Client.LastName @item.Client.FirstName</td>
+                <td>@item.Date.ToShortDateString()</td>
+                <td>@item.DeliveryDate.ToShortDateString()</td>
+                <td>
+                    <a asp-action="Details" asp-route-id="@item.ID">Деталі</a> |
+                    <a asp-action="Edit" asp-route-id="@item.ID">Редагувати</a> |
+                    <a asp-action="Delete" asp-route-id="@item.ID">Видалити</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

@@ -1,0 +1,60 @@
+@model Client
+
+@{
+    ViewData["Title"] = "Деталі клієнта";
+}
+
+<h1>Деталі клієнта</h1>
+
+<div>
+    <dl class="row">
+        <dt class="col-sm-2">@Html.DisplayNameFor(model => model.LastName)</dt>
+        <dd class="col-sm-10">@Model.LastName</dd>
+
+        <dt class="col-sm-2">@Html.DisplayNameFor(model => model.FirstName)</dt>
+        <dd class="col-sm-10">@Model.FirstName</dd>
+
+        <dt class="col-sm-2">@Html.DisplayNameFor(model => model.MiddleName)</dt>
+        <dd class="col-sm-10">@Model.MiddleName</dd>
+
+        <dt class="col-sm-2">@Html.DisplayNameFor(model => model.Phone)</dt>
+        <dd class="col-sm-10">@Model.Phone</dd>
+
+        <dt class="col-sm-2">@Html.DisplayNameFor(model => model.Address)</dt>
+        <dd class="col-sm-10">@Model.Address</dd>
+    </dl>
+</div>
+
+<h4 class="mt-4">Замовлення клієнта</h4>
+
+@if (Model.Orders.Any())
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>№ замовлення</th>
+                <th>Дата прийому</th>
+                <th>Дата видачі</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var order in Model.Orders)
+            {
+                <tr>
+                    <td>@order.ID</td>
+                    <td>@order.Date.ToShortDateString()</td>
+                    <td>@order.DeliveryDate.ToShortDateString()</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>У цього клієнта ще немає замовлень.</p>
+}
+
+<div>
+    <a asp-action="Edit" asp-route-id="@Model.ID">Редагувати</a> |
+    <a asp-action="Index">Назад до списку</a>
+</div>

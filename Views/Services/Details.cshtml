@@ -1,0 +1,20 @@
+@model Service
+
+@{
+    ViewData["Title"] = "Деталі послуги";
+}
+
+<h1>Деталі послуги</h1>
+
+<dl class="row">
+    <dt class="col-sm-2">@Html.DisplayNameFor(model => model.Name)</dt>
+    <dd class="col-sm-10">@Model.Name</dd>
+
+    <dt class="col-sm-2">@Html.DisplayNameFor(model => model.Description)</dt>
+    <dd class="col-sm-10">@Model.Description</dd>
+</dl>
+
+<div>
+    <a asp-action="Edit" asp-route-id="@Model.ID">Редагувати</a> |
+    <a asp-action="Index">Назад до списку</a>
+</div>
