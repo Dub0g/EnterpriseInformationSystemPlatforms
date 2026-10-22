@@ -1,0 +1,118 @@
+﻿@model Lab_4.Models.Orders
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    var clients  = (SelectList)ViewData["Clients"]!;
+    var services = (SelectList)ViewData["Services"]!;
+    var prefix   = ViewData.TemplateInfo.HtmlFieldPrefix; // "Order"
+}
+
+<div asp-validation-summary="All" class="text-danger"></div>
+<input type="hidden" asp-for="ID" />
+
+<div class="row mb-3">
+    <div class="col-md-4">
+        <label asp-for="ClientID" class="form-label"></label>
+        <select asp-for="ClientID" asp-items="clients" class="form-select">
+            <option value="0">-- оберіть клієнта --</option>
+        </select>
+        <span asp-validation-for="ClientID" class="text-danger"></span>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="Date" class="form-label"></label>
+        <input asp-for="Date" class="form-control" />
+        <span asp-validation-for="Date" class="text-danger"></span>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="DeliveryDate" class="form-label"></label>
+        <input asp-for="DeliveryDate" class="form-control" />
+        <span asp-validation-for="DeliveryDate" class="text-danger"></span>
+    </div>
+</div>
+
+<h5>Послуги</h5>
+<table class="table" id="lines">
+    <thead>
+        <tr><th>Послуга</th><th style="width:120px">Кількість</th><th style="width:160px">Ціна</th><th style="width:140px">Сума</th><th></th></tr>
+    </thead>
+    <tbody>
+        @for (int i = 0; i < Model.OrderDetails.Count; i++)
+        {
+            <tr class="line">
+                <td>
+                    <select asp-for="OrderDetails[i].ServiceID" asp-items="services" class="form-select"></select>
+                </td>
+                <td><input asp-for="OrderDetails[i].Quantity" class="form-control qty" /></td>
+                <td><input asp-for="OrderDetails[i].UnitPrice" type="number" step="0.01" class="form-control price" /></td>
+                <td class="sum">0.00</td>
+                <td><button type="button" class="btn btn-outline-danger btn-sm remove">✕</button></td>
+            </tr>
+        }
+    </tbody>
+    <tfoot>
+        <tr>
+            <td colspan="3" class="text-end"><b>Разом:</b></td>
+            <td id="total"><b>0.00</b></td><td></td>
+        </tr>
+    </tfoot>
+</table>
+<button type="button" id="addLine" class="btn btn-outline-secondary mb-3">+ Додати послугу</button>
+
+<template id="lineTemplate">
+    <tr class="line">
+        <td>
+            <select name="Order.OrderDetails[__i__].ServiceID" class="form-select">
+                @foreach (var s in services)
+                {
+                    <option value="@s.Value">@s.Text</option>
+                }
+            </select>
+        </td>
+        <td><input name="Order.OrderDetails[__i__].Quantity" value="1" class="form-control qty" /></td>
+        <td><input name="Order.OrderDetails[__i__].UnitPrice" type="number" step="0.01" class="form-control price" /></td>
+        <td class="sum">0.00</td>
+        <td><button type="button" class="btn btn-outline-danger btn-sm remove">✕</button></td>
+    </tr>
+</template>
+
+<script>
+    const tbody = document.querySelector('#lines tbody');
+
+    function reindex() {
+        tbody.querySelectorAll('tr.line').forEach((row, i) => {
+            row.querySelectorAll('[name]').forEach(el => {
+                el.name = el.name.replace(/OrderDetails\[(\d+|__i__)\]/, `OrderDetails[${i}]`);
+                el.id = el.name.replace(/[.\[\]]/g, '_');
+            });
+        });
+    }
+
+    function recalc() {
+        let total = 0;
+        tbody.querySelectorAll('tr.line').forEach(row => {
+            const q = parseFloat(row.querySelector('.qty').value) || 0;
+            const p = parseFloat(row.querySelector('.price').value) || 0;
+            const s = q * p;
+            row.querySelector('.sum').textContent = s.toFixed(2);
+            total += s;
+        });
+        document.querySelector('#total').innerHTML = '<b>' + total.toFixed(2) + '</b>';
+    }
+
+    document.getElementById('addLine').addEventListener('click', () => {
+        const html = document.getElementById('lineTemplate').innerHTML;
+        tbody.insertAdjacentHTML('beforeend', html);
+        reindex(); recalc();
+    });
+
+    tbody.addEventListener('click', e => {
+        if (e.target.classList.contains('remove')) {
+            if (tbody.querySelectorAll('tr.line').length > 1) {
+                e.target.closest('tr').remove();
+                reindex(); recalc();
+            }
+        }
+    });
+
+    tbody.addEventListener('input', recalc);
+    recalc();
+</script>

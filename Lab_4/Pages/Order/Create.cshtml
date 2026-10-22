@@ -1,0 +1,11 @@
+@page
+@model Lab_4.Pages.Order.CreateModel
+@{ ViewData["Title"] = "Нове замовлення"; }
+
+<h1>Нове замовлення</h1>
+
+<form method="post">
+    <partial name="_OrderForm" for="Order" view-data="ViewData" />
+    <button type="submit" class="btn btn-primary">Зберегти</button>
+    <a asp-page="Index" class="btn btn-secondary">Скасувати</a>
+</form>
