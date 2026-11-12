@@ -1,0 +1,6 @@
+wwwroot\services.html
+wwwroot\index.html
+wwwroot\orders.html
+D:\Проекти на C#\Lab_6\Lab_6\wwwroot\services.html
+D:\Проекти на C#\Lab_6\Lab_6\wwwroot\orders.html
+D:\Проекти на C#\Lab_6\Lab_6\wwwroot\index.html

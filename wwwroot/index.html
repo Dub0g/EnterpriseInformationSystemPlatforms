@@ -1,0 +1,202 @@
+﻿<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Клієнти - Photo Studio API</title>
+    <!-- Підключення стилів Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+    <!-- Навігаційне меню -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="#">Photo Studio API</a>
+            <div class="navbar-nav">
+                <a class="nav-link active" href="index.html">Клієнти</a>
+                <a class="nav-link" href="services.html">Послуги</a>
+                <a class="nav-link" href="orders.html">Замовлення</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>Список клієнтів</h2>
+            <!-- Кнопка для відкриття модального вікна створення -->
+            <button class="btn btn-success" onclick="openCreateModal()">+ Додати клієнта</button>
+        </div>
+
+        <!-- Таблиця даних -->
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Прізвище</th>
+                            <th>Ім'я</th>
+                            <th>По батькові</th>
+                            <th>Телефон</th>
+                            <th>Адреса</th>
+                            <th>Дії</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Дані завантажуються сюди -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальне вікно (Форма для Створення/Редагування) -->
+    <div class="modal fade" id="clientModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Додати клієнта</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="clientForm">
+                        <input type="hidden" id="clientId"> <!-- Приховане поле для ID при редагуванні -->
+                        <div class="mb-2">
+                            <label class="form-label">Прізвище</label>
+                            <input type="text" id="lastName" class="form-control" required>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Ім'я</label>
+                            <input type="text" id="firstName" class="form-control" required>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">По батькові</label>
+                            <input type="text" id="middleName" class="form-control">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Телефон</label>
+                            <input type="text" id="phone" class="form-control">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Адреса</label>
+                            <input type="text" id="address" class="form-control">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                    <button type="button" class="btn btn-primary" onclick="saveClient()">Зберегти</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Підключення скриптів Bootstrap -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Логіка взаємодії з OData API -->
+    <script>
+        const apiUrl = '/odata/Clients';
+        let clientsList = []; // Зберігаємо поточний список клієнтів
+        let clientModal; // Змінна для керування модальним вікном
+
+        // Ініціалізація при завантаженні сторінки
+        document.addEventListener('DOMContentLoaded', () => {
+            clientModal = new bootstrap.Modal(document.getElementById('clientModal'));
+            loadData();
+        });
+
+        // READ: Завантаження даних
+        async function loadData() {
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+            clientsList = data.value;
+            
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            clientsList.forEach(c => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${c.ID}</td>
+                        <td>${c.LastName}</td>
+                        <td>${c.FirstName}</td>
+                        <td>${c.MiddleName || ''}</td>
+                        <td>${c.Phone || ''}</td>
+                        <td>${c.Address || ''}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="openEditModal(${c.ID})">Редагувати</button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteClient(${c.ID})">Видалити</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // Відкриття вікна для СТВОРЕННЯ
+        function openCreateModal() {
+            document.getElementById('clientForm').reset();
+            document.getElementById('clientId').value = ''; // Очищаємо ID
+            document.getElementById('modalTitle').innerText = 'Додати клієнта';
+            clientModal.show();
+        }
+
+        // Відкриття вікна для РЕДАГУВАННЯ
+        function openEditModal(id) {
+            // Знаходимо клієнта у збереженому масиві
+            const client = clientsList.find(c => c.ID === id);
+            
+            // Заповнюємо форму існуючими даними
+            document.getElementById('clientId').value = client.ID;
+            document.getElementById('lastName').value = client.LastName;
+            document.getElementById('firstName').value = client.FirstName;
+            document.getElementById('middleName').value = client.MiddleName || '';
+            document.getElementById('phone').value = client.Phone || '';
+            document.getElementById('address').value = client.Address || '';
+            
+            document.getElementById('modalTitle').innerText = 'Редагувати клієнта';
+            clientModal.show();
+        }
+
+        // CREATE / UPDATE: Збереження даних
+        async function saveClient() {
+            const id = document.getElementById('clientId').value;
+            
+            const clientData = {
+                LastName: document.getElementById('lastName').value,
+                FirstName: document.getElementById('firstName').value,
+                MiddleName: document.getElementById('middleName').value || null,
+                Phone: document.getElementById('phone').value || null,
+                Address: document.getElementById('address').value || null
+            };
+
+            if (id) {
+                
+                clientData.ID = parseInt(id); 
+                await fetch(`${apiUrl}(${id})`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(clientData)
+                });
+            } else {
+                
+                await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(clientData)
+                });
+            }
+
+            clientModal.hide(); 
+            loadData(); 
+        }
+
+        // DELETE: Видалення
+        async function deleteClient(id) {
+            if (!confirm('Ви дійсно хочете видалити цього клієнта?')) return;
+            await fetch(`${apiUrl}(${id})`, { method: 'DELETE' });
+            loadData();
+        }
+    </script>
+</body>
+</html>

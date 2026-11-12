@@ -1,0 +1,270 @@
+﻿<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Замовлення - Photo Studio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="#">Photo Studio API</a>
+            <div class="navbar-nav">
+                <a class="nav-link" href="index.html">Клієнти</a>
+                <a class="nav-link" href="services.html">Послуги</a>
+                <a class="nav-link active" href="orders.html">Замовлення</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>Замовлення</h2>
+            <button class="btn btn-success" onclick="openModal()">+ Створити замовлення</button>
+        </div>
+        <div class="card shadow-sm mb-5">
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th><th>Клієнт</th><th>Дата прийому</th><th>Дата видачі</th><th>К-сть послуг</th><th>Дії</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Вікно створення замовлення (Master-Detail) -->
+    <div class="modal fade" id="orderModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Створення замовлення</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Головна інформація -->
+                    <h6 class="border-bottom pb-2">Головна інформація</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Клієнт *</label>
+                            <select id="clientId" class="form-select" required></select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Дата прийому *</label>
+                            <input type="date" id="date" class="form-control" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Дата видачі *</label>
+                            <input type="date" id="deliveryDate" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <!-- Деталі замовлення -->
+                    <h6 class="border-bottom pb-2">Деталі замовлення (Додані послуги)</h6>
+                    <table class="table table-bordered table-sm mb-3">
+                        <thead class="table-light">
+                            <tr><th>Послуга</th><th>К-сть</th><th>Ціна за од.</th><th>Сума</th><th>Дія</th></tr>
+                        </thead>
+                        <tbody id="detailsTableBody">
+                            <tr><td colspan="5" class="text-center text-muted">Немає доданих послуг</td></tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Форма додавання послуги у тимчасовий список -->
+                    <div class="card bg-light p-3">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-5">
+                                <label class="form-label">Оберіть послугу</label>
+                                <select id="tempServiceId" class="form-select"></select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Кількість</label>
+                                <input type="number" id="tempQuantity" class="form-control" value="1" min="1">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Ціна за од.</label>
+                                <input type="number" id="tempPrice" class="form-control" step="0.01">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-secondary w-100" onclick="addDetail()">Додати</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                    <!-- Кнопка створення, блокується якщо немає деталей -->
+                    <button type="button" class="btn btn-primary" id="btnSave" onclick="saveOrder()" disabled>Зберегти в базу</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const baseUrl = '/odata/Orders';
+        let modal;
+        
+        // Довідники для випадаючих списків
+        let clientsList = [];
+        let servicesList = [];
+        
+        // Тимчасовий масив для деталей (OrderDetails)
+        let currentOrderDetails = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            modal = new bootstrap.Modal(document.getElementById('orderModal'));
+            await loadLookups(); // Завантажуємо клієнтів і послуги
+            loadOrders();
+        });
+
+        // Завантаження довідників
+        async function loadLookups() {
+            const [clientsRes, servicesRes] = await Promise.all([
+                fetch('/odata/Clients'),
+                fetch('/odata/Services')
+            ]);
+            clientsList = (await clientsRes.json()).value;
+            servicesList = (await servicesRes.json()).value;
+
+            document.getElementById('clientId').innerHTML = '<option value="">-- Оберіть клієнта --</option>' + 
+                clientsList.map(c => `<option value="${c.ID}">${c.FirstName} ${c.LastName}</option>`).join('');
+            
+            document.getElementById('tempServiceId').innerHTML = '<option value="">-- Оберіть послугу --</option>' + 
+                servicesList.map(s => `<option value="${s.ID}">${s.Name}</option>`).join('');
+        }
+
+        // Завантаження списку замовлень (використовуємо $expand для підтягування пов'язаних даних)
+        async function loadOrders() {
+            const res = await fetch(`${baseUrl}?$expand=Client,OrderDetails`);
+            const data = await res.json();
+            const tbody = document.getElementById('tableBody');
+            
+            tbody.innerHTML = data.value.map(o => {
+                const clientName = o.Client ? `${o.Client.FirstName} ${o.Client.LastName}` : `Клієнт #${o.ClientID}`;
+                const detailsCount = o.OrderDetails ? o.OrderDetails.length : 0;
+                
+                return `
+                <tr>
+                    <td>${o.ID}</td>
+                    <td>${clientName}</td>
+                    <td>${o.Date.split('T')[0]}</td>
+                    <td>${o.DeliveryDate.split('T')[0]}</td>
+                    <td>${detailsCount}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteOrder(${o.ID})">Видалити</button>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function openModal() {
+            // Очищення форми та тимчасового списку
+            document.getElementById('clientId').value = '';
+            document.getElementById('date').value = new Date().toISOString().split('T')[0];
+            
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            document.getElementById('deliveryDate').value = tomorrow.toISOString().split('T')[0];
+            
+            currentOrderDetails = [];
+            renderDetailsTable();
+            modal.show();
+        }
+
+        // Додавання послуги в тимчасовий масив
+        function addDetail() {
+            const serviceId = parseInt(document.getElementById('tempServiceId').value);
+            const quantity = parseInt(document.getElementById('tempQuantity').value);
+            const price = parseFloat(document.getElementById('tempPrice').value);
+
+            if (!serviceId || quantity <= 0 || !price) {
+                alert("Заповніть всі поля послуги коректно!");
+                return;
+            }
+
+            currentOrderDetails.push({
+                ServiceID: serviceId,
+                Quantity: quantity,
+                UnitPrice: price
+            });
+
+            // Скидання форми послуги
+            document.getElementById('tempServiceId').value = '';
+            document.getElementById('tempQuantity').value = '1';
+            document.getElementById('tempPrice').value = '';
+
+            renderDetailsTable();
+        }
+
+        function removeDetail(index) {
+            currentOrderDetails.splice(index, 1);
+            renderDetailsTable();
+        }
+
+        // Відображення тимчасових деталей у таблиці
+        function renderDetailsTable() {
+            const tbody = document.getElementById('detailsTableBody');
+            const btnSave = document.getElementById('btnSave');
+            
+            if (currentOrderDetails.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Немає доданих послуг</td></tr>';
+                btnSave.disabled = true;
+                return;
+            }
+
+            btnSave.disabled = false;
+            tbody.innerHTML = currentOrderDetails.map((d, index) => {
+                const sName = servicesList.find(s => s.ID === d.ServiceID)?.Name || "Невідомо";
+                return `
+                <tr>
+                    <td>${sName}</td>
+                    <td>${d.Quantity}</td>
+                    <td>${d.UnitPrice}</td>
+                    <td>${(d.Quantity * d.UnitPrice).toFixed(2)}</td>
+                    <td><button class="btn btn-sm btn-danger" onclick="removeDetail(${index})">Вид.</button></td>
+                </tr>`;
+            }).join('');
+        }
+
+        // Відправка POST запиту з вкладеними OrderDetails
+        async function saveOrder() {
+            const clientId = parseInt(document.getElementById('clientId').value);
+            const date = document.getElementById('date').value;
+            const deliveryDate = document.getElementById('deliveryDate').value;
+
+            if (!clientId || !date || !deliveryDate) {
+                alert("Заповніть всі головні поля замовлення!");
+                return;
+            }
+
+            const orderPayload = {
+                ClientID: clientId,
+                Date: date,
+                DeliveryDate: deliveryDate,
+                // OData та EF Core автоматично розпізнають і збережуть цей вкладений масив
+                OrderDetails: currentOrderDetails 
+            };
+
+            await fetch(baseUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(orderPayload)
+            });
+
+            modal.hide();
+            loadOrders();
+        }
+
+        async function deleteOrder(id) {
+            if (confirm('Видалити замовлення разом з деталями?')) {
+                await fetch(`${baseUrl}(${id})`, { method: 'DELETE' });
+                loadOrders();
+            }
+        }
+    </script>
+</body>
+</html>

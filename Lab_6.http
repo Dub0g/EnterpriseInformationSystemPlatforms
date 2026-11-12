@@ -1,0 +1,10 @@
+### 2. CREATE (Створення нового клієнта)
+POST https://localhost:7105/odata/Clients
+Content-Type: application/json
+
+{
+  "LastName": "Франко",
+  "FirstName": "Іван",
+  "Phone": "0990000000",
+  "Address": "м. Чернівці"
+}
