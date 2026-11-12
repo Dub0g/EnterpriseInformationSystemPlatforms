@@ -1,0 +1,69 @@
+@page "/clients/create"
+@using Microsoft.EntityFrameworkCore
+@using Lab_5.Models
+@inject IDbContextFactory<Lab_5_1Context> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create</PageTitle>
+
+<h1>Create</h1>
+<h2>Clients</h2>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="Clients" OnValidSubmit="AddClients" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert"/>
+            
+            <div class="mb-3">
+                <span class="text-danger">*</span>
+                <label for="lastname" class="form-label">LastName:</label> 
+                <InputText id="lastname" @bind-Value="Clients.LastName" class="form-control" aria-required="true"/> 
+                <ValidationMessage For="() => Clients.LastName" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <span class="text-danger">*</span>
+                <label for="firstname" class="form-label">FirstName:</label> 
+                <InputText id="firstname" @bind-Value="Clients.FirstName" class="form-control" aria-required="true"/> 
+                <ValidationMessage For="() => Clients.FirstName" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="middlename" class="form-label">MiddleName:</label> 
+                <InputText id="middlename" @bind-Value="Clients.MiddleName" class="form-control" /> 
+                <ValidationMessage For="() => Clients.MiddleName" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="address" class="form-label">Address:</label> 
+                <InputText id="address" @bind-Value="Clients.Address" class="form-control" /> 
+                <ValidationMessage For="() => Clients.Address" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="phone" class="form-label">Phone:</label> 
+                <InputText id="phone" @bind-Value="Clients.Phone" class="form-control" /> 
+                <ValidationMessage For="() => Clients.Phone" class="text-danger" /> 
+            </div>        
+            
+            <button type="submit" class="btn btn-primary">Create</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/clients">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private Clients Clients { get; set; } = default!;
+
+    protected override void OnInitialized() => Clients ??= new();
+
+    // To protect from overposting attacks, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
+    private async Task AddClients()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Clients.Add(Clients);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/clients");
+    }
+}

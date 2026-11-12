@@ -1,0 +1,260 @@
+@page "/orders/edit"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using Lab_5.Models
+@inject IDbContextFactory<Lab_5_1Context> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit</PageTitle>
+
+<h1>Edit</h1>
+<h2>Orders</h2>
+<hr />
+
+@if (Orders is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-8">
+            <EditForm method="post" Model="Orders" OnValidSubmit="UpdateOrders" FormName="edit">
+                <DataAnnotationsValidator />
+                <ValidationSummary role="alert"/>
+                <input type="hidden" name="Orders.ID" value="@Orders.ID" />
+                
+                <h4>Головна інформація</h4>
+                <div class="mb-3">
+                    <span class="text-danger">*</span>
+                    <label for="clientid" class="form-label">Client:</label>
+                    <InputSelect id="clientid" @bind-Value="Orders.ClientID" class="form-control" aria-required="true">
+                        <option value="">-- Оберіть клієнта --</option>
+                        @if (clients != null)
+                        {
+                            @foreach (var client in clients)
+                            {
+                                <option value="@client.ID">@client.FirstName @client.LastName</option>
+                            }
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => Orders.ClientID" class="text-danger" />
+                </div>
+                
+                <div class="mb-3">
+                    <span class="text-danger">*</span>
+                    <label for="date" class="form-label">Date:</label>
+                    <InputDate id="date" @bind-Value="Orders.Date" class="form-control" aria-required="true"/>
+                    <ValidationMessage For="() => Orders.Date" class="text-danger" />
+                </div>
+                
+                <div class="mb-3">
+                    <span class="text-danger">*</span>
+                    <label for="deliverydate" class="form-label">DeliveryDate:</label>
+                    <InputDate id="deliverydate" @bind-Value="Orders.DeliveryDate" class="form-control" aria-required="true"/>
+                    <ValidationMessage For="() => Orders.DeliveryDate" class="text-danger" />
+                </div>
+
+                <hr />
+                <h4>Деталі замовлення (Додані послуги)</h4>
+                
+                @if (Orders.OrderDetails != null && Orders.OrderDetails.Any())
+                {
+                    <table class="table table-bordered mb-3">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Послуга</th>
+                                <th>Кількість</th>
+                                <th>Ціна за од.</th>
+                                <th>Сума</th>
+                                <th>Дія</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var detail in Orders.OrderDetails.ToList())
+                            {
+                                <tr>
+                                    <td>@(services.FirstOrDefault(s => s.ID == detail.ServiceID)?.Name)</td>
+                                    <td>@detail.Quantity</td>
+                                    <td>@detail.UnitPrice</td>
+                                    <td>@(detail.Quantity * detail.UnitPrice)</td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-danger" @onclick="() => RemoveDetail(detail)">Видалити</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <div class="alert alert-warning">У замовленні немає послуг.</div>
+                }
+
+                <!-- Блок додавання нової послуги -->
+                <div class="card p-3 mb-4 bg-light">
+                    <h5>Додати послугу:</h5>
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label">Service:</label> 
+                            <InputSelect @bind-Value="TempDetail.ServiceID" class="form-control">
+                                <option value="0">-- Оберіть послугу --</option>
+                                @if (services != null)
+                                {
+                                    @foreach (var service in services)
+                                    {
+                                        <option value="@service.ID">@service.Name</option>
+                                    }
+                                }
+                            </InputSelect>
+                        </div> 
+                        <div class="col-md-3">
+                            <label class="form-label">Quantity:</label> 
+                            <InputNumber @bind-Value="TempDetail.Quantity" class="form-control" /> 
+                        </div> 
+                        <div class="col-md-3">
+                            <label class="form-label">UnitPrice:</label> 
+                            <InputNumber @bind-Value="TempDetail.UnitPrice" class="form-control" /> 
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-secondary w-100" @onclick="AddDetail">Додати</button>
+                        </div>
+                    </div>
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <span class="text-danger mt-2">@errorMessage</span>
+                    }
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg" disabled="@(Orders.OrderDetails == null || !Orders.OrderDetails.Any())">Save Changes</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div class="mt-3">
+    <a href="/orders">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private int ID { get; set; }
+
+    private Orders? Orders { get; set; }
+    private OrderDetails TempDetail { get; set; } = new() { Quantity = 1 };
+
+    private List<Clients> clients = new(); 
+    private List<Services> services = new();
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        
+        clients = await context.Clients.ToListAsync();
+        services = await context.Services.ToListAsync();
+
+        Orders = await context.Orders
+            .Include(o => o.OrderDetails)
+            .FirstOrDefaultAsync(m => m.ID == ID);
+
+        if (Orders is null)
+        {
+            NavigationManager.NotFound();
+        }
+    }
+
+    private void AddDetail()
+    {
+        errorMessage = string.Empty;
+
+        if (TempDetail.ServiceID == 0)
+        {
+            errorMessage = "Будь ласка, оберіть послугу.";
+            return;
+        }
+        if (TempDetail.Quantity <= 0)
+        {
+            errorMessage = "Кількість має бути більшою за нуль.";
+            return;
+        }
+
+        Orders!.OrderDetails.Add(new OrderDetails
+        {
+            ServiceID = TempDetail.ServiceID,
+            Quantity = TempDetail.Quantity,
+            UnitPrice = TempDetail.UnitPrice
+        });
+
+        TempDetail = new OrderDetails { Quantity = 1 };
+    }
+
+    private void RemoveDetail(OrderDetails detail)
+    {
+        Orders!.OrderDetails.Remove(detail);
+    }
+
+    private async Task UpdateOrders()
+    {
+        using var context = DbFactory.CreateDbContext();
+        
+        var existingOrder = await context.Orders
+            .Include(o => o.OrderDetails)
+            .FirstOrDefaultAsync(o => o.ID == ID);
+
+        if (existingOrder == null)
+        {
+            NavigationManager.NotFound();
+            return;
+        }
+
+       
+        existingOrder.ClientID = Orders!.ClientID;
+        existingOrder.Date = Orders.Date;
+        existingOrder.DeliveryDate = Orders.DeliveryDate;
+
+        
+        var currentDetailIds = Orders.OrderDetails.Select(d => d.ID).ToList();
+        var detailsToRemove = existingOrder.OrderDetails
+            .Where(d => !currentDetailIds.Contains(d.ID))
+            .ToList();
+            
+        context.RemoveRange(detailsToRemove);
+
+       
+        var detailsToAdd = Orders.OrderDetails.Where(d => d.ID == 0).ToList();
+        foreach (var newDetail in detailsToAdd)
+        {
+            existingOrder.OrderDetails.Add(new OrderDetails
+            {
+                ServiceID = newDetail.ServiceID,
+                Quantity = newDetail.Quantity,
+                UnitPrice = newDetail.UnitPrice
+            });
+        }
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!OrdersExists(Orders!.ID))
+            {
+                NavigationManager.NotFound();
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        NavigationManager.NavigateTo("/orders");
+    }
+
+    private bool OrdersExists(int id)
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.Orders.Any(e => e.ID == id);
+    }
+}

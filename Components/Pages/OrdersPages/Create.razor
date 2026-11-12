@@ -1,0 +1,188 @@
+@page "/orders/create"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using Lab_5.Models
+@inject IDbContextFactory<Lab_5_1Context> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create</PageTitle>
+
+<h1>Create</h1>
+<h2>Orders</h2>
+<hr />
+<div class="row">
+    <div class="col-md-8">
+        <EditForm method="post" Model="Orders" OnValidSubmit="AddOrders" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert"/>
+            
+            <h4>Головна інформація</h4>
+            <div class="mb-3">
+                <span class="text-danger">*</span>
+                <label for="clientid" class="form-label">Client:</label> 
+                <InputSelect id="clientid" @bind-Value="Orders.ClientID" class="form-control">
+                    <option value="">-- Оберіть клієнта --</option>
+                    @if (clients != null)
+                    {
+                        @foreach (var client in clients)
+                        {
+                            <option value="@client.ID">@client.FirstName @client.LastName</option>
+                        }
+                    }
+                </InputSelect>
+                <ValidationMessage For="() => Orders.ClientID" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <span class="text-danger">*</span>
+                <label for="date" class="form-label">Date:</label> 
+                <InputDate id="date" @bind-Value="Orders.Date" class="form-control" /> 
+                <ValidationMessage For="() => Orders.Date" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <span class="text-danger">*</span>
+                <label for="deliverydate" class="form-label">DeliveryDate:</label> 
+                <InputDate id="deliverydate" @bind-Value="Orders.DeliveryDate" class="form-control" /> 
+                <ValidationMessage For="() => Orders.DeliveryDate" class="text-danger" /> 
+            </div>        
+
+            <hr />
+            <h4>Деталі замовлення (Додані послуги)</h4>
+            
+           
+            @if (Orders.OrderDetails != null && Orders.OrderDetails.Any())
+            {
+                <table class="table table-bordered mb-3">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Послуга</th>
+                            <th>Кількість</th>
+                            <th>Ціна за од.</th>
+                            <th>Сума</th>
+                            <th>Дія</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var detail in Orders.OrderDetails)
+                        {
+                            <tr>
+                                <td>@(services.FirstOrDefault(s => s.ID == detail.ServiceID)?.Name)</td>
+                                <td>@detail.Quantity</td>
+                                <td>@detail.UnitPrice</td>
+                                <td>@(detail.Quantity * detail.UnitPrice)</td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-danger" @onclick="() => RemoveDetail(detail)">Видалити</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="alert alert-warning">Додайте хоча б одну послугу до замовлення.</div>
+            }
+
+           
+            <div class="card p-3 mb-4 bg-light">
+                <h5>Додати послугу:</h5>
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label">Service:</label> 
+                        <InputSelect @bind-Value="TempDetail.ServiceID" class="form-control">
+                            <option value="0">-- Оберіть послугу --</option>
+                            @if (services != null)
+                            {
+                                @foreach (var service in services)
+                                {
+                                    <option value="@service.ID">@service.Name</option>
+                                }
+                            }
+                        </InputSelect>
+                    </div> 
+                    <div class="col-md-3">
+                        <label class="form-label">Quantity:</label> 
+                        <InputNumber @bind-Value="TempDetail.Quantity" class="form-control" /> 
+                    </div> 
+                    <div class="col-md-3">
+                        <label class="form-label">UnitPrice:</label> 
+                        <InputNumber @bind-Value="TempDetail.UnitPrice" class="form-control" /> 
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-secondary w-100" @onclick="AddDetail">Додати</button>
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <span class="text-danger mt-2">@errorMessage</span>
+                }
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg" disabled="@(Orders.OrderDetails == null || !Orders.OrderDetails.Any())">Створити замовлення</button>
+        </EditForm>
+    </div>
+</div>
+<div class="mt-3">
+    <a href="/orders">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private Orders Orders { get; set; } = new();
+
+    
+    private OrderDetails TempDetail { get; set; } = new() { Quantity = 1 };
+
+    private List<Clients> clients = new();
+    private List<Services> services = new();
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        clients = await context.Clients.ToListAsync();
+        services = await context.Services.ToListAsync();
+        
+        
+        Orders.OrderDetails ??= new List<OrderDetails>();
+    }
+
+    private void AddDetail()
+    {
+        errorMessage = string.Empty;
+
+        if (TempDetail.ServiceID == 0)
+        {
+            errorMessage = "Будь ласка, оберіть послугу.";
+            return;
+        }
+        if (TempDetail.Quantity <= 0)
+        {
+            errorMessage = "Кількість має бути більшою за нуль.";
+            return;
+        }
+
+       
+        Orders.OrderDetails.Add(new OrderDetails
+        {
+            ServiceID = TempDetail.ServiceID,
+            Quantity = TempDetail.Quantity,
+            UnitPrice = TempDetail.UnitPrice
+        });
+
+       
+        TempDetail = new OrderDetails { Quantity = 1 };
+    }
+
+    private void RemoveDetail(OrderDetails detail)
+    {
+        Orders.OrderDetails.Remove(detail);
+    }
+
+    private async Task AddOrders()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Orders.Add(Orders);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/orders");
+    }
+}

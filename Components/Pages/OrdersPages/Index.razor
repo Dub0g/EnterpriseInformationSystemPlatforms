@@ -1,0 +1,40 @@
+@page "/orders"
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using Microsoft.EntityFrameworkCore
+@using Lab_5.Models
+@implements IAsyncDisposable
+@inject IDbContextFactory<Lab_5_1Context> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Index</PageTitle>
+
+<h1>Index</h1>
+
+<p>
+    <a href="orders/create">Create New</a>
+</p>
+
+<QuickGrid Class="table" Items="context.Orders.Include(o => o.Client)">
+    <TemplateColumn Title="Client" Context="orders">
+        @orders.Client.FirstName @orders.Client.LastName
+    </TemplateColumn>
+    <PropertyColumn Property="orders => orders.Date" />
+    <PropertyColumn Property="orders => orders.DeliveryDate" />
+    
+    <TemplateColumn Context="orders">
+        <a href="@($"orders/edit?id={orders.ID}")">Edit</a> |
+        <a href="@($"orders/details?id={orders.ID}")">Details</a> |
+        <a href="@($"orders/delete?id={orders.ID}")">Delete</a>
+    </TemplateColumn>
+</QuickGrid>
+
+@code {
+    private Lab_5_1Context context = default!;
+
+    protected override void OnInitialized()
+    {
+        context = DbFactory.CreateDbContext();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

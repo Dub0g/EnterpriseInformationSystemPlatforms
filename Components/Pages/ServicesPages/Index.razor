@@ -1,0 +1,37 @@
+@page "/services"
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using Microsoft.EntityFrameworkCore
+@using Lab_5.Models
+@implements IAsyncDisposable
+@inject IDbContextFactory<Lab_5_1Context> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Index</PageTitle>
+
+<h1>Index</h1>
+
+<p>
+    <a href="services/create">Create New</a>
+</p>
+
+<QuickGrid Class="table" Items="context.Services">
+    <PropertyColumn Property="services => services.Name" />
+    <PropertyColumn Property="services => services.Description" />
+
+    <TemplateColumn Context="services">
+        <a href="@($"services/edit?id={services.ID}")">Edit</a> |
+        <a href="@($"services/details?id={services.ID}")">Details</a> |
+        <a href="@($"services/delete?id={services.ID}")">Delete</a>
+    </TemplateColumn>
+</QuickGrid>
+
+@code {
+    private Lab_5_1Context context = default!;
+
+    protected override void OnInitialized()
+    {
+        context = DbFactory.CreateDbContext();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

@@ -1,0 +1,89 @@
+@page "/orders/delete"
+@using Microsoft.EntityFrameworkCore
+@using Lab_5.Models
+@inject IDbContextFactory<Lab_5_1Context> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Delete</PageTitle>
+
+<h1>Delete</h1>
+
+<p>Are you sure you want to delete this?</p>
+<div>
+    <h2>Orders</h2>
+    <hr />
+    @if (orders is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else 
+    {
+        <dl class="row">
+            <dt class="col-sm-2">Client</dt>
+            <dd class="col-sm-10">@(orders.Client?.FirstName) @(orders.Client?.LastName)</dd>
+
+            <dt class="col-sm-2">Date</dt>
+            <dd class="col-sm-10">@orders.Date.ToShortDateString()</dd>
+
+            <dt class="col-sm-2">DeliveryDate</dt>
+            <dd class="col-sm-10">@orders.DeliveryDate.ToShortDateString()</dd>
+
+            <dt class="col-sm-2">OrderDetails</dt>
+            <dd class="col-sm-10">
+                @if (orders.OrderDetails != null && orders.OrderDetails.Any())
+                {
+                    <ul>
+                        @foreach (var detail in orders.OrderDetails)
+                        {
+                            <li>
+                                Послуга: @(detail.Service?.Name) | 
+                                Кількість: @detail.Quantity | 
+                                Ціна: @detail.UnitPrice
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <span>Деталі відсутні</span>
+                }
+            </dd>
+        </dl>
+        <EditForm method="post" Model="orders" OnValidSubmit="DeleteOrders" FormName="delete" Enhance>
+            <button type="submit" class="btn btn-danger" disabled="@(orders is null)">Delete</button> |
+            <a href="/orders">Back to List</a>
+        </EditForm>
+    }
+</div>
+
+@code {
+    private Orders? orders;
+
+    [SupplyParameterFromQuery]
+    private int ID { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        
+       
+        orders = await context.Orders
+            .Include(o => o.Client)
+            .Include(o => o.OrderDetails)
+                .ThenInclude(od => od.Service)
+            .FirstOrDefaultAsync(m => m.ID == ID);
+
+        if (orders is null)
+        {
+            NavigationManager.NotFound();
+        }
+    }
+
+    private async Task DeleteOrders()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Orders.Remove(orders!);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/orders");
+    }
+}

@@ -1,0 +1,91 @@
+@page "/orders/details"
+@using Microsoft.EntityFrameworkCore
+@using Lab_5.Models
+@inject IDbContextFactory<Lab_5_1Context> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    <h2>Orders</h2>
+    <hr />
+    @if (orders is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else 
+    {
+        <dl class="row">
+            <dt class="col-sm-2">Client</dt>
+            <dd class="col-sm-10">@(orders.Client?.FirstName) @(orders.Client?.LastName)</dd>
+
+            <dt class="col-sm-2">Date</dt>
+            <dd class="col-sm-10">@orders.Date.ToShortDateString()</dd>
+
+            <dt class="col-sm-2">DeliveryDate</dt>
+            <dd class="col-sm-10">@orders.DeliveryDate.ToShortDateString()</dd>
+
+            <dt class="col-sm-10 mt-3"><strong>OrderDetails</strong></dt>
+            <dd class="col-sm-12">
+                @if (orders.OrderDetails != null && orders.OrderDetails.Any())
+                {
+                    <table class="table table-sm table-bordered mt-2">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Послуга</th>
+                                <th>Кількість</th>
+                                <th>Ціна за од.</th>
+                                <th>Сума</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var detail in orders.OrderDetails)
+                            {
+                                <tr>
+                                    <td>@(detail.Service?.Name)</td>
+                                    <td>@detail.Quantity</td>
+                                    <td>@detail.UnitPrice</td>
+                                    <td>@(detail.Quantity * detail.UnitPrice)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <span class="text-muted">Деталі відсутні</span>
+                }
+            </dd>
+        </dl>
+        <div class="mt-3">
+            <a class="btn btn-primary" href="@($"/orders/edit?id={orders.ID}")">Edit</a> |
+            <a href="@($"/orders")">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    private Orders? orders;
+
+    [SupplyParameterFromQuery]
+    private int ID { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        
+       
+        orders = await context.Orders
+            .Include(o => o.Client)
+            .Include(o => o.OrderDetails)
+                .ThenInclude(od => od.Service)
+            .FirstOrDefaultAsync(m => m.ID == ID);
+
+        if (orders is null)
+        {
+            NavigationManager.NotFound();
+        }
+    }
+}
